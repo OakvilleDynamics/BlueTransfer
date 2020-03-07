@@ -122,7 +122,7 @@ public class BluetoothServerService extends IntentService {
                                 charsRead += in.read(buffer, charsRead, length - charsRead);
                             }
                             if (charsRead == length) {
-                                File myDir = getDataDirectory();
+                                File myDir = getUploadDirectory();
                                 File outFile = new File(myDir, filename);
                                 writeFile(outFile, new String(buffer));
                             }
@@ -304,6 +304,13 @@ public class BluetoothServerService extends IntentService {
     public static File getDataDirectory() {
         File directory = Environment.getExternalStorageDirectory();
         File myDir = new File(directory + "/ScoutingData");
+        myDir.mkdirs();
+        return myDir;
+    }
+
+    public static File getUploadDirectory() {
+        File directory = Environment.getExternalStorageDirectory();
+        File myDir = new File(directory + "/Documents");
         myDir.mkdirs();
         return myDir;
     }
