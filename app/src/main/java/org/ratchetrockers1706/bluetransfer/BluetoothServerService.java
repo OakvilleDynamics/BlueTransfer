@@ -10,12 +10,16 @@ import android.content.Intent;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationManagerCompat;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -26,6 +30,7 @@ import java.util.UUID;
 
 
 public class BluetoothServerService extends IntentService {
+    int notificationId = (int)(Math.random() * 102400.0);
 
     private class ToastRunner implements Runnable {
         private String message;
@@ -35,7 +40,27 @@ public class BluetoothServerService extends IntentService {
 
         @Override
         public void run() {
-            Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+            //Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+            try {
+                Log.e(this.getClass().getSimpleName(), "Sending notification message: " + message);
+                Context appCtxt = getApplicationContext();
+                // The string "my-integer" will be used to filer the intent
+                Intent intent = new Intent("scouting-message");
+                // Adding some data
+                intent.putExtra("message", message);
+                LocalBroadcastManager.getInstance(appCtxt).sendBroadcast(intent);
+
+                NotificationCompat.Builder builder = new NotificationCompat.Builder(appCtxt)
+                        //.setSmallIcon(R.drawable.notification_icon)
+                        .setContentTitle("Scouting 1706")
+                        .setContentText(message)
+                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                        .setAutoCancel(false);
+                NotificationManagerCompat notificationManager = NotificationManagerCompat.from(appCtxt);
+                notificationManager.notify(++notificationId, builder.build());
+            } catch (Exception e) {
+                Log.e(this.getClass().getSimpleName(), "Unable to send notification", e);
+            }
         }
     }
 
@@ -91,6 +116,22 @@ public class BluetoothServerService extends IntentService {
                         } else {
                             out.println("0");
                         }
+                    } else if (input.toLowerCase().startsWith("put ")) {
+                        String[] parts = input.split(" ");
+                        if (parts.length == 3) {
+                            String filename = parts[1];
+                            int length = Integer.parseInt(parts[2]);
+                            char buffer[] = new char[length];
+                            int charsRead = 0;
+                            while (charsRead < length) {
+                                charsRead += in.read(buffer, charsRead, length - charsRead);
+                            }
+                            if (charsRead == length) {
+                                File myDir = getUploadDirectory();
+                                File outFile = new File(myDir, filename);
+                                writeFile(outFile, new String(buffer));
+                            }
+                        }
                     } else if (input.toLowerCase().startsWith("delete ")) {
                         File myDir = getDataDirectory();
                         String filename = input.substring(6).trim();
@@ -106,6 +147,10 @@ public class BluetoothServerService extends IntentService {
                         }
                     } else if (input.toLowerCase().startsWith("toast ")) {
                         Log.i(BluetoothServerService.class.getName(), "Toast: " + input);
+
+                        //Intent intent = new Intent(this, "com.example.robotics.deepspace");
+
+
                         myHandler.post(new ToastRunner(input.substring(6).trim()));
                     } else {
                         out.println("What?");
@@ -249,9 +294,28 @@ public class BluetoothServerService extends IntentService {
         return "";
     }
 
+    private static boolean writeFile(File f, String content) {
+        try  {
+            FileWriter writer = new FileWriter(f);
+            writer.write(content);
+            writer.close();
+        } catch (IOException e) {
+            Log.e(BluetoothServerService.class.getName(), "Unable to write file " + f.getName(), e);
+            return false;
+        }
+        return true;
+    }
+
     public static File getDataDirectory() {
         File directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
         File myDir = new File(directory + "/ScoutingData");
+        myDir.mkdirs();
+        return myDir;
+    }
+
+    public static File getUploadDirectory() {
+        File directory = Environment.getExternalStorageDirectory();
+        File myDir = new File(directory + "/Documents");
         myDir.mkdirs();
         return myDir;
     }
