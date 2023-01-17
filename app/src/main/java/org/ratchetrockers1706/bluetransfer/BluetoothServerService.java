@@ -21,7 +21,9 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.security.MessageDigest;
+import java.util.Arrays;
 import java.util.UUID;
+
 
 public class BluetoothServerService extends IntentService {
 
@@ -59,7 +61,9 @@ public class BluetoothServerService extends IntentService {
                     // process command
                     if ("list".equalsIgnoreCase(input)) {
                         File myDir = getDataDirectory();
-                        File files[] = myDir.listFiles();
+                        File[] files = myDir.listFiles();
+                        Log.e("files", Arrays.toString(files));
+                        Log.e("dir", myDir.getAbsolutePath());
                         for (File file : files) {
                             out.print(file.length());
                             out.print(" ");
@@ -68,6 +72,7 @@ public class BluetoothServerService extends IntentService {
                             out.println(file.getName());
                         }
                         out.println("---");
+
                         out.flush();
                         if (files == null || files.length == 0) {
                             emptyDirCount++;
@@ -245,7 +250,7 @@ public class BluetoothServerService extends IntentService {
     }
 
     public static File getDataDirectory() {
-        File directory = Environment.getExternalStorageDirectory();
+        File directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
         File myDir = new File(directory + "/ScoutingData");
         myDir.mkdirs();
         return myDir;
